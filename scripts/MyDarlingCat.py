@@ -55,11 +55,17 @@ def get_app_dir():
 
 def get_game_root():
     app_dir = get_app_dir()
-    parent = os.path.dirname(app_dir)
-    if os.path.isdir(os.path.join(parent, "images")):
-        return parent
-    if os.path.isdir(os.path.join(app_dir, "images")):
-        return app_dir
+    current = app_dir
+    for _ in range(5):
+        images_dir = os.path.join(current, "images")
+        if os.path.isdir(images_dir):
+            png = os.path.join(images_dir, "ConsoleCat.png")
+            if os.path.exists(png):
+                return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
     return app_dir
 
 
@@ -82,11 +88,11 @@ GAME_ROOT = get_game_root()
 DESKTOP_DIR = get_desktop_dir()
 
 PNG_ICON = os.path.join(GAME_ROOT, "images", "ConsoleCat.png")
-DATA_DIR = os.path.join(GAME_ROOT, "data")
+DATA_DIR = APP_DIR
 try:
     os.makedirs(DATA_DIR, exist_ok=True)
 except Exception:
-    DATA_DIR = GAME_ROOT
+    pass
 
 ICO_ICON = os.path.join(DATA_DIR, "ConsoleCat.ico")
 
@@ -307,34 +313,6 @@ def clear():
         pass
 
 
-def delete_script():
-    lnk_path = os.path.join(DESKTOP_DIR, "My Darling Cat.lnk")
-    if not getattr(sys, "frozen", False):
-        try:
-            if os.path.exists(SCRIPT_FILE):
-                os.remove(SCRIPT_FILE)
-        except Exception:
-            pass
-        try:
-            if os.path.exists(lnk_path):
-                os.remove(lnk_path)
-        except Exception:
-            pass
-        return
-
-    try:
-        cmd_file = os.path.join(os.environ.get("TEMP", "."), "mdc_delete.cmd")
-        with open(cmd_file, "w", encoding="utf-8") as f:
-            f.write("@echo off\n")
-            f.write("ping 127.0.0.1 -n 3 > nul\n")
-            f.write(f'del /F /Q "{SCRIPT_FILE}"\n')
-            f.write(f'del /F /Q "{lnk_path}"\n')
-            f.write(f'del /F /Q "%~f0"\n')
-        subprocess.Popen(cmd_file, shell=True, creationflags=0x08000000)
-    except Exception:
-        pass
-
-
 def fatal_exit(text):
     clear()
     print(text)
@@ -343,7 +321,6 @@ def fatal_exit(text):
         input(">>> ")
     except EOFError:
         pass
-    delete_script()
     sys.exit(0)
 
 
