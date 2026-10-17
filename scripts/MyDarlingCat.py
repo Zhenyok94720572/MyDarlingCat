@@ -196,6 +196,8 @@ TEXTS = {
         "sex_m": "1 - Мальчик",
         "sex_f": "2 - Девочка",
         "sex_err": "Неверный ввод! Введите 1 или 2.",
+        "ask_face": "Выбери внешность кота:",
+        "face_err": "Неверный ввод! Введите номер от 1 до 6.",
         "console_feed_m": 'Это твой кот "{}".\nЧтобы его покормить — нажми Enter!',
         "console_feed_f": 'Это твоя кошка "{}".\nЧтобы её покормить — нажми Enter!',
         "fed": "Отлично! Возвращайся завтра!",
@@ -219,6 +221,8 @@ TEXTS = {
         "sex_m": "1 - Boy",
         "sex_f": "2 - Girl",
         "sex_err": "Invalid input! Enter 1 or 2.",
+        "ask_face": "Choose your cat's look:",
+        "face_err": "Invalid input! Enter a number from 1 to 6.",
         "console_feed_m": 'This is your cat "{}".\nTo feed him — press Enter!',
         "console_feed_f": 'This is your cat "{}".\nTo feed her — press Enter!',
         "fed": "Great! Come back tomorrow!",
@@ -231,16 +235,26 @@ TEXTS = {
     },
 }
 
-CAT_ART = r"""
- /\_/\
-(='.'=)
-(")_(")
-"""
+CAT_FACES = [
+    "ฅ^•ﻌ•^ฅ",
+    "^ↀᴥↀ^",
+    "(=｀ω´=)",
+    "(=^-ω-^=)",
+    "(^˵◕ω◕˵^)",
+    "(=^・ω・^=)",
+]
 
 NOW_FMT = "%Y-%m-%d %H:%M:%S"
 
 FEED_COOLDOWN = datetime.timedelta(hours=24)
 FORGOT_LIMIT = datetime.timedelta(hours=48)
+
+
+def get_cat_art(face_index):
+    idx = face_index
+    if idx is None or idx < 0 or idx >= len(CAT_FACES):
+        idx = 0
+    return "\n" + CAT_FACES[idx] + "\n"
 
 
 def now_dt():
@@ -280,7 +294,7 @@ def save_json(path, data):
 
 def load_config():
     return load_json(CONFIG_FILE, {
-        "lang": None, "cat_name": None, "cat_sex": None,
+        "lang": None, "cat_name": None, "cat_sex": None, "cat_face": None,
         "last_fed": None, "started": None,
         "streak": 0, "best_streak": 0
     })
@@ -395,10 +409,29 @@ def scene_sex(cfg):
             print(t["sex_err"])
 
 
+def scene_face(cfg):
+    t = TEXTS[cfg["lang"]]
+    clear()
+    print(t["ask_face"])
+    print()
+    for i, face in enumerate(CAT_FACES, 1):
+        print(f"{i} - {face}")
+    print()
+    while True:
+        choice = input(">>> ").strip()
+        if choice in [str(i) for i in range(1, len(CAT_FACES) + 1)]:
+            cfg["cat_face"] = int(choice) - 1
+            save_config(cfg)
+            return
+        else:
+            print(t["face_err"])
+
+
 def scene_cat(cfg):
     t = TEXTS[cfg["lang"]]
     sex = cfg.get("cat_sex") or "m"
     feed_text = t["console_feed_m"] if sex == "m" else t["console_feed_f"]
+    art = get_cat_art(cfg.get("cat_face"))
 
     streak = cfg.get("streak") or 0
     last_fed = parse_dt(cfg.get("last_fed"))
@@ -413,7 +446,7 @@ def scene_cat(cfg):
             remaining = FEED_COOLDOWN - elapsed
 
     clear()
-    print(CAT_ART)
+    print(art)
     print(feed_text.format(cfg["cat_name"]))
     if streak > 0:
         print()
@@ -450,7 +483,7 @@ def scene_cat(cfg):
     save_config(cfg)
 
     clear()
-    print(CAT_ART)
+    print(art)
     print(t["fed"])
     print()
     if is_record and new_streak > 1:
@@ -500,7 +533,7 @@ def check_ban():
         return True
     else:
         save_lock({"ban_until": None})
-        save_config({"lang": None, "cat_name": None, "cat_sex": None,
+        save_config({"lang": None, "cat_name": None, "cat_sex": None, "cat_face": None,
                      "last_fed": None, "started": None,
                      "streak": 0, "best_streak": 0})
         save_forgiven({"forgiven": True})
@@ -519,6 +552,7 @@ def check_forgot(cfg):
         save_lock({"ban_until": ban_until.strftime(NOW_FMT)})
         cfg["cat_name"] = None
         cfg["cat_sex"] = None
+        cfg["cat_face"] = None
         cfg["last_fed"] = None
         cfg["streak"] = 0
         save_config(cfg)
@@ -535,7 +569,7 @@ def main():
     if fg.get("forgiven"):
         show_forgiven_message()
         save_forgiven({"forgiven": False})
-        save_config({"lang": None, "cat_name": None, "cat_sex": None,
+        save_config({"lang": None, "cat_name": None, "cat_sex": None, "cat_face": None,
                      "last_fed": None, "started": None,
                      "streak": 0, "best_streak": 0})
 
@@ -553,6 +587,8 @@ def main():
     cfg = load_config()
     scene_sex(cfg)
     cfg = load_config()
+    scene_face(cfg)
+    cfg = load_config()
     scene_cat(cfg)
 
 
@@ -569,3 +605,4 @@ if __name__ == "__main__":
             input("Нажми Enter чтобы выйти...")
         except EOFError:
             pass
+            #Thanks for taking a look at my game's code!
